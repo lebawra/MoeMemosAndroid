@@ -1,3 +1,8 @@
+<font size="3.5">MoeMemos with an option to encrypt/decrypt memos with a secret key (16, 24, or 32 bytes) using the AES algorithm.</font>
+
+<img src="https://files.catbox.moe/thttco.png" height="500">
+<img src="https://files.catbox.moe/ahq174.png" height="500">
+
 # Moe Memos
 
 <img alt="Moe Memos" src="https://memos.moe/memos.png" width="160" height="160" />
