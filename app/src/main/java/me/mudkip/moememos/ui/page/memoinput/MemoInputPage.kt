@@ -52,6 +52,10 @@ import me.mudkip.moememos.viewmodel.LocalMemos
 import me.mudkip.moememos.viewmodel.LocalUserState
 import me.mudkip.moememos.viewmodel.MemoInputViewModel
 import timber.log.Timber
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
+import java.util.Base64
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -313,6 +317,62 @@ fun MemoInputPage(
                         Icons.Outlined.PhotoCamera,
                         contentDescription = R.string.take_photo.string
                     )
+                }
+
+                var isDialogOpen by remember { mutableStateOf(false) }
+                var password by remember { mutableStateOf(TextFieldValue()) }
+
+                if (isDialogOpen) {
+                    AlertDialog(
+                        onDismissRequest = {
+                            isDialogOpen = false
+                        },
+                        title = {
+                            Text("Encrypt your text")
+                        },
+                        text = {
+                            Column {
+                                OutlinedTextField(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    value = password,
+                                    label = { Text("Password") },
+                                    onValueChange = {
+                                        password = it
+                                    })
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    if (password.text.isNotEmpty() && text.text.isNotEmpty()) {
+                                        try {
+                                            val cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING")
+                                            val secretKey = SecretKeySpec(password.text.toByteArray(Charsets.UTF_8), "AES")
+                                            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+                                            val cipherText = cipher.doFinal(text.text.toByteArray(Charsets.UTF_8))
+                                            text = TextFieldValue(Base64.getEncoder().encodeToString(cipherText))
+                                        } catch (e: Exception) {
+                                            text = TextFieldValue("Encryption error : ${e.message} (16, 24 or 32 expected)")
+                                        }
+                                    }
+                                    isDialogOpen = false
+                                },
+                                content = { Text("Encrypt") }
+                            )
+                        },
+                        dismissButton = {
+                            Button(
+                                onClick = {
+                                    isDialogOpen = false
+                                },
+                                content = { Text("Cancel") }
+                            )
+                        }
+                    )
+                }
+
+                IconButton(onClick = {isDialogOpen = true}) {
+                    Icon(Icons.Outlined.Key, contentDescription = "Encrypt")
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
