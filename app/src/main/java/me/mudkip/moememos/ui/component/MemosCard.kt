@@ -1,5 +1,6 @@
 package me.mudkip.moememos.ui.component
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.text.format.DateUtils
 import androidx.compose.foundation.BorderStroke
@@ -16,9 +17,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.PinDrop
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -26,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.skydoves.sandwich.suspendOnSuccess
 import kotlinx.coroutines.launch
@@ -50,6 +56,9 @@ import me.mudkip.moememos.ui.page.common.LocalRootNavController
 import me.mudkip.moememos.ui.page.common.RouteName
 import me.mudkip.moememos.viewmodel.LocalMemos
 import me.mudkip.moememos.viewmodel.LocalUserState
+import javax.crypto.Cipher
+import javax.crypto.spec.SecretKeySpec
+import android.util.Base64
 
 @Composable
 fun MemosCard(
@@ -181,6 +190,77 @@ fun MemosCardActionButton(
                         contentDescription = null
                     )
                 })
+
+            var isDialogOpen by remember { mutableStateOf(false) }
+            var password by remember { mutableStateOf(TextFieldValue()) }
+            var decryptedText by remember { mutableStateOf("") }
+
+            if (isDialogOpen) {
+                AlertDialog(
+                    onDismissRequest = {
+                        isDialogOpen = false
+                    },
+                    title = {
+                        Text("Decrypt memo")
+                    },
+                    text = {
+                        Column {
+                            OutlinedTextField(
+                                modifier = Modifier.fillMaxWidth(),
+                                value = password,
+                                label = { Text("Password") },
+                                onValueChange = {
+                                    password = it
+                                },
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (password.text.isNotEmpty() && memo.content.isNotEmpty()) {
+                                    try {
+                                        val cipher = Cipher.getInstance("AES/ECB/PKCS5PADDING")
+                                        val secretKey = SecretKeySpec(password.text.toByteArray(Charsets.UTF_8), "AES")
+                                        cipher.init(Cipher.DECRYPT_MODE, secretKey)
+                                        val memoContent = Base64.decode(memo.content, Base64.DEFAULT)
+                                        decryptedText = String(cipher.doFinal(memoContent))
+                                    } catch (e: Exception) {
+                                        decryptedText = "Decryption error : Wrong password"
+                                    }
+                                    isDialogOpen = false
+
+                                    AlertDialog.Builder(context)
+                                        .setTitle("Decrypted text")
+                                        .setMessage(decryptedText)
+                                        .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+                                        .show()
+
+                                }
+                            },
+                            content = { Text("Decrypt") }
+                        )
+                    },
+                    dismissButton = {
+                        Button(
+                            onClick = {
+                                isDialogOpen = false
+                            },
+                            content = { Text("Cancel") }
+                        )
+                    }
+                )
+            }
+            DropdownMenuItem(
+                text = { Text("Decrypt") },
+                onClick = { isDialogOpen = true },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.Key,
+                        contentDescription = null
+                    )
+                })
+
             DropdownMenuItem(
                 text = { Text(R.string.archive.string) },
                 onClick = {
